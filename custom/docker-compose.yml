@@ -1,0 +1,152 @@
+version: "3.9"
+  
+networks:
+  internal-pod:
+    internal: true
+  external-pod:
+    internal: false
+
+volumes:
+  dolibarr_db:
+  dolibarr_web:
+
+secrets:
+  mysqlu:
+    file: ./secrets/mysqlu.secret
+  mysqlp:
+    file: ./secrets/mysqlp.secret
+  doliu:
+    file: ./secrets/doliu.secret
+  dolip:
+    file: ./secrets/dolip.secret
+
+services:
+  dolibarr_db:
+    profiles: ["dolibarr"]
+    image: mariadb:latest
+    hostname: ${COMPOSE_PROJECT_NAME}-dolibarr_db
+    container_name: ${COMPOSE_PROJECT_NAME}-dolibarr_db
+    labels:
+      service.type: db
+      project.type: ${COMPOSE_PROJECT_NAME}
+    privileged: true
+    tty: true
+    stdin_open: true
+    restart: always
+    secrets:
+      - mysqlu
+      - mysqlp
+#    command:
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "1"
+      MYSQL_DATABASE: "dolibarr"
+      MYSQL_USER_FILE: "/run/secrets/mysqlu"
+      MYSQL_PASSWORD_FILE: "/run/secrets/mysqlp"
+    volumes:
+      - dolibarr_db:/var/lib/mysql
+    ports:
+      - "43306:3306"
+    networks:
+      - internal-pod
+      - external-pod
+#    extra_hosts:
+
+  dolibarr_pma:
+    profiles: ["dolibarr"]
+    image: phpmyadmin:latest
+    hostname: ${COMPOSE_PROJECT_NAME}-dolibarr_pma
+    container_name: ${COMPOSE_PROJECT_NAME}-dolibarr_pma
+    depends_on:
+      - dolibarr_db
+    labels:
+      service.type: pma
+      project.type: ${COMPOSE_PROJECT_NAME}
+    privileged: true
+    tty: true
+    stdin_open: true
+    restart: always
+#    secrets:
+#    command:
+    environment:
+      PMA_HOST: ${COMPOSE_PROJECT_NAME}-dolibarr_db
+#    volumes:
+    ports:
+      - "48082:80"
+    networks:
+      - internal-pod
+      - external-pod
+#    extra_hosts:
+
+  dolibarr_mail:
+    profiles: ["dolibarr"]
+    image: maildev/maildev:latest
+    hostname: ${COMPOSE_PROJECT_NAME}-dolibarr_mail
+    container_name: ${COMPOSE_PROJECT_NAME}-dolibarr_mail
+    labels:
+      service.type: mail
+      project.type: ${COMPOSE_PROJECT_NAME}
+    privileged: true
+    tty: true
+    stdin_open: true
+    restart: always
+#    secrets:
+#    command:
+#    environment:
+#    volumes:
+    ports:
+      - "48081:80"
+      - "425:25"
+    networks:
+      - internal-pod
+      - external-pod
+#    extra_hosts:
+
+  dolibarr_web:
+    profiles: ["dolibarr"]
+    image: tuxgasy/dolibarr:latest
+    hostname: ${COMPOSE_PROJECT_NAME}-dolibarr_web
+    container_name: ${COMPOSE_PROJECT_NAME}-dolibarr_web
+#   build:
+#     context: ./
+    depends_on:
+      - dolibarr_db
+      - dolibarr_mail
+    labels:
+      service.type: web
+      project.type: ${COMPOSE_PROJECT_NAME}
+    privileged: true
+    tty: true
+    stdin_open: true
+    restart: always
+    secrets:
+      - mysqlu
+      - mysqlp
+      - doliu
+      - dolip
+#    command:
+    environment:
+#      DOLI_ADMIN_LOGIN: "cadmin"
+#      DOLI_ADMIN_PASSWORD: "cod6444"
+      DOLI_ADMIN_LOGIN_FILE: "/run/secrets/doliu"
+      DOLI_ADMIN_PASSWORD_FILE: "/run/secrets/dolip"
+      DOLI_URL_ROOT: 'http://0.0.0.0'      
+      DOLI_DB_HOST: ${COMPOSE_PROJECT_NAME}-dolibarr_db
+      DOLI_DB_NAME: dolibarr
+      DOLI_DB_USER_FILE: "/run/secrets/mysqlu"
+      DOLI_DB_PASSWORD_FILE: "/run/secrets/mysqlp"
+      WWW_USER_ID: 1000
+      WWW_GROUP_ID: 1000
+    volumes:
+      - dolibarr_web:/var
+      - ./documents:/var/documents
+      - ./custom:/var/www/html/custom
+    ports:
+      - "48080:80"
+      - "49000:9000"
+    networks:
+      - internal-pod
+      - external-pod
+    extra_hosts:
+      - "localhost.localdomain:127.0.0.1"
+
+#################################################
