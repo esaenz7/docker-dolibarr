@@ -9,14 +9,17 @@ networks:
 volumes:
   dolibarr-custom:
   dolibarr-docs:
-  mysql-data:
+  postgres-data:
 
 services:
   dolibarr:
     image: tuxgasy/dolibarr:latest
+    depends_on:
+      - postgres
     environment:
-      DOLI_DB_HOST: "mysql"
-      DOLI_DB_HOST_PORT: "3306"
+      DOLI_DB_TYPE: "pgsql"
+      DOLI_DB_HOST: "postgres"
+      DOLI_DB_HOST_PORT: "5432"
       DOLI_DB_USER: "dolibarr"
       DOLI_DB_PASSWORD: "mysupersecretpasswordfordatabase"
       DOLI_DB_NAME: "dolibarr"
@@ -31,13 +34,12 @@ services:
       - internal-pod
       - external-pod
 
-  mysql:
-    image: library/mariadb:latest
+  postgres:
+    image: postgres:latest
     environment:
-      MYSQL_DATABASE: "dolibarr"
-      MYSQL_USER: "dolibarr"
-      MYSQL_PASSWORD: "mysupersecretpasswordfordatabase"
+      POSTGRES_USER: "dolibarr"
+      POSTGRES_PASSWORD: "mysupersecretpasswordfordatabase"
     volumes:
-      - mysql-data:/var/lib/mysql
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - internal-pod

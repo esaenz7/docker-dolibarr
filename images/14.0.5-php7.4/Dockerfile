@@ -1,9 +1,12 @@
-FROM php:7.4-apache-buster
+ARG ARCH=
+
+FROM ${ARCH}php:7.4-apache-buster
 
 LABEL maintainer="Garcia MICHEL <garcia@soamichel.fr>"
 
 ENV DOLI_INSTALL_AUTO 1
 
+ENV DOLI_DB_TYPE mysqli
 ENV DOLI_DB_HOST mysql
 ENV DOLI_DB_HOST_PORT 3306
 ENV DOLI_DB_NAME dolidb
@@ -23,6 +26,8 @@ ENV DOLI_LDAP_BIND_DN ''
 ENV DOLI_LDAP_BIND_PASS ''
 ENV DOLI_LDAP_DEBUG false
 
+ENV DOLI_CRON 0
+
 ENV WWW_USER_ID 33
 ENV WWW_GROUP_ID 33
 
@@ -38,13 +43,18 @@ RUN apt-get update -y \
         libkrb5-dev \
         libldap2-dev \
         libpng-dev \
+        libpq-dev \
         libxml2-dev \
         libzip-dev \
         default-mysql-client \
+        postgresql-client \
+        cron \
     && apt-get autoremove -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) calendar intl mysqli pdo_mysql gd soap zip \
-    && docker-php-ext-configure ldap --with-libdir=lib/x86_64-linux-gnu/ \
+    && docker-php-ext-configure pgsql -with-pgsql \
+    && docker-php-ext-install pdo_pgsql pgsql \
+    && docker-php-ext-configure ldap --with-libdir=lib/$(gcc -dumpmachine)/ \
     && docker-php-ext-install -j$(nproc) ldap \
     && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
     && docker-php-ext-install imap \

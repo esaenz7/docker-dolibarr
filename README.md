@@ -9,12 +9,17 @@ Docker image for Dolibarr with auto installer on first boot.
 * 11.0.5-php7.4 11.0.5 11
 * 12.0.5-php7.4 12.0.5 12
 * 13.0.4-php7.4 13.0.4 13
-* 14.0.5-php7.4 14.0.5 14 latest
+* 14.0.5-php7.4 14.0.5 14
+* 15.0.3-php7.4 15.0.3 15 latest
 * develop
 
 **End of support for PHP < 7.3**
 
 **Dolibarr versions 7, 8 no more updated**
+
+## Supported architectures
+
+Linux x86-64 (`amd64`), ARMv7 32-bit (`arm32v7` :warning: MariaDB/Mysql docker images don't support it) and ARMv8 64-bit (`arm64v8`)
 
 ## What is Dolibarr ?
 
@@ -72,11 +77,25 @@ The `install.lock` file is located inside the container volume `/var/www/documen
 Remove the `install.lock` file and start an updated version container. Ensure that env `DOLI_INSTALL_AUTO` is set to `1`. It will migrate Database to the new version.
 You can still use the standard way to upgrade through web interface.
 
+## Early support for PostgreSQL
+Setting `DOLI_DB_TYPE` to `pgsql` enable Dolibarr to run with a PostgreSQL database.
+When set to use `pgsql`, Dolibarr must be installed manually on it's first execution:
+ - Browse to `http://0.0.0.0/install`;
+ - Follow the installation setup;
+ - Add `install.lock` inside the container volume `/var/www/html/documents` (ex `docker-compose exec services-data_dolibarr_1 /bin/bash -c "touch /var/www/html/documents/install.lock"`).
+
+When setup this way, to upgrade version the use of the web interface is mandatory:
+ - Remove the `install.lock` file (ex `docker-compose exec services-data_dolibarr_1 /bin/bash -c "rm -f /var/www/html/documents/install.lock"`).
+ - Browse to `http://0.0.0.0/install`;
+ - Upgrade DB;
+ - Add `install.lock` inside the container volume `/var/www/html/documents` (ex `docker-compose exec services-data_dolibarr_1 /bin/bash -c "touch /var/www/html/documents/install.lock"`).
+
 ## Environment variables summary
 
 | Variable                      | Default value                  | Description |
 | ----------------------------- | ------------------------------ | ----------- |
 | **DOLI_INSTALL_AUTO**         | *1*                            | 1: The installation will be executed on first boot
+| **DOLI_DB_TYPE**              | *mysqli*                       | Type of the DB server (**mysqli**, pgsql)
 | **DOLI_DB_HOST**              | *mysql*                        | Host name of the MariaDB/MySQL server
 | **DOLI_DB_HOST_PORT**         | *3306*                         | Host port of the MariaDB/MySQL server
 | **DOLI_DB_USER**              | *doli*                         | Database user
@@ -100,6 +119,9 @@ You can still use the standard way to upgrade through web interface.
 | **DOLI_LDAP_BIND_DN**         |                                | The complete DN of the user with read access on users
 | **DOLI_LDAP_BIND_PASS**       |                                | The password of the bind user
 | **DOLI_LDAP_DEBUG**           | *false*                        | Activate debug mode
+| **DOLI_CRON**                 | *0*                            | 1: Enable cron service
+| **DOLI_CRON_KEY**             |                                | Security key launch cron jobs
+| **DOLI_CRON_USER**            |                                | Dolibarr user used for cron jobs
 
 Some environment variables are compatible with docker secrets behaviour, just add the `_FILE` suffix to var name and point the value file to read.
 Environment variables that are compatible with docker secrets:
