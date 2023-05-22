@@ -42,6 +42,8 @@ function initDolibarr()
 date.timezone = ${PHP_INI_DATE_TIMEZONE}
 sendmail_path = /usr/sbin/sendmail -t -i
 memory_limit = ${PHP_INI_MEMORY_LIMIT}
+upload_max_filesize = ${PHP_INI_UPLOAD_MAX_FILESIZE}
+post_max_size = ${PHP_INI_POST_MAX_SIZE}
 EOF
 
 if [[ ! -f /var/www/html/conf/conf.php ]]; then
@@ -158,6 +160,9 @@ function initializeDatabase()
   mysql -u ${DOLI_DB_USER} -p${DOLI_DB_PASSWORD} -h ${DOLI_DB_HOST} -P ${DOLI_DB_HOST_PORT} ${DOLI_DB_NAME} -e "INSERT INTO llx_const(name,value,type,visible,note,entity) values('MAIN_VERSION_LAST_INSTALL', '${DOLI_VERSION}', 'chaine', 0, 'Dolibarr version when install', 0);" > /dev/null 2>&1
   mysql -u ${DOLI_DB_USER} -p${DOLI_DB_PASSWORD} -h ${DOLI_DB_HOST} -P ${DOLI_DB_HOST_PORT} ${DOLI_DB_NAME} -e "INSERT INTO llx_const(name,value,type,visible,note,entity) VALUES ('MAIN_LANG_DEFAULT', 'auto', 'chaine', 0, 'Default language', 1);" > /dev/null 2>&1
   mysql -u ${DOLI_DB_USER} -p${DOLI_DB_PASSWORD} -h ${DOLI_DB_HOST} -P ${DOLI_DB_HOST_PORT} ${DOLI_DB_NAME} -e "INSERT INTO llx_const(name,value,type,visible,note,entity) VALUES ('SYSTEMTOOLS_MYSQLDUMP', '/usr/bin/mysqldump', 'chaine', 0, '', 0);" > /dev/null 2>&1
+
+  echo "Enable user module ..."
+  php /var/www/scripts/docker-init.php
 }
 
 function migrateDatabase()
@@ -226,6 +231,8 @@ DOLI_DB_USER=$(get_env_value 'DOLI_DB_USER' 'doli')
 DOLI_DB_PASSWORD=$(get_env_value 'DOLI_DB_PASSWORD' 'doli_pass')
 DOLI_ADMIN_LOGIN=$(get_env_value 'DOLI_ADMIN_LOGIN' 'admin')
 DOLI_ADMIN_PASSWORD=$(get_env_value 'DOLI_ADMIN_PASSWORD' 'admin')
+DOLI_CRON_KEY=$(get_env_value 'DOLI_CRON_KEY' '')
+DOLI_CRON_USER=$(get_env_value 'DOLI_CRON_USER' '')
 
 run
 
@@ -233,7 +240,7 @@ set -e
 
 if [[ ${DOLI_CRON} -eq 1 ]]; then
     echo "PATH=\$PATH:/usr/local/bin" > /etc/cron.d/dolibarr
-    echo "*/5 * * * * www-data /var/www/scripts/cron/cron_run_jobs.php ${DOLI_CRON_KEY} ${DOLI_CRON_USER} > /var/www/documents/cron_run_jobs.php.log 2>&1" >> /etc/cron.d/dolibarr
+    echo "*/5 * * * * root /bin/su www-data -s /bin/sh -c '/var/www/scripts/cron/cron_run_jobs.php ${DOLI_CRON_KEY} ${DOLI_CRON_USER}' > /proc/1/fd/1 2> /proc/1/fd/2" >> /etc/cron.d/dolibarr
     cron -f
     exit 0
 fi
